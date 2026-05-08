@@ -34,7 +34,7 @@ public class ListGraph<T> implements Graph<T> {
 
   @Override
   public boolean hasNode(T node) {
-    throw new UnsupportedOperationException("Unimplemented method 'hasNode'");
+    return edgeNodes.containsKey(node);
   }
 
   @Override
