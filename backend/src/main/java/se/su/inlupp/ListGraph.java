@@ -11,7 +11,25 @@ public class ListGraph<T> implements Graph<T> {
 
   @Override
   public void remove(T node) {
-    throw new UnsupportedOperationException("Unimplemented method 'remove'");
+    if(edgeNodes.containsKey(node)) {
+      for(T n: edgeNodes.keySet()) {
+        List<Edge<T>> edgeList = edgeNodes.get(n); // get edges connecting to n
+        List<Edge<T>> edgesToRemove = new ArrayList<>();
+        for(Edge<T> edge : edgeList) {
+          if(edge.getDestination().equals(node)) {
+            edgesToRemove.add(edge); //
+          }
+        }
+
+        // Remove edges connected to the given node
+        for(Edge<T> edge : edgesToRemove) {
+          edgeList.remove(edge);
+        }
+      }
+      edgeNodes.remove(node);
+    } else {
+      throw new NoSuchElementException("given node was not found");
+    }
   }
 
   @Override
