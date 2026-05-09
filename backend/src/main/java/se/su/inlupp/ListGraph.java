@@ -39,7 +39,24 @@ public class ListGraph<T> implements Graph<T> {
 
   @Override
   public void connect(T node1, T node2, String name, int weight) {
-    throw new UnsupportedOperationException("Unimplemented method 'connect'");
+    if(!hasNode(node1) || !hasNode(node2)) throw new NoSuchElementException("Node is missing");
+    if(weight < 0) throw new IllegalArgumentException("Weight cannot be negative");
+    Edge<T> edgesBetween = getEdgeBetween(node1, node2);
+    if(edgesBetween != null) {
+      // create new Edges
+      EdgeBase<T> firstEdge = new EdgeBase(weight, name, node2);
+      EdgeBase<T> secondEdge = new EdgeBase(weight, name, node1);
+      // get Edges
+      List<Edge<T>> node1Edges = edgeNodes.get(node1);
+      List<Edge<T>> node2Edges = edgeNodes.get(node2);
+
+      // update nodes edges
+      node1Edges.add(firstEdge);
+      node2Edges.add(secondEdge);
+    } else {
+      throw new IllegalStateException();
+    }
+
   }
 
   @Override
@@ -72,4 +89,6 @@ public class ListGraph<T> implements Graph<T> {
     throw new UnsupportedOperationException("Unimplemented method 'iterator'");
   }
 }
+
+
 
