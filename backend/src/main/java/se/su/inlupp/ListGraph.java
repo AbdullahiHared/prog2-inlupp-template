@@ -71,7 +71,8 @@ public class ListGraph<T> implements Graph<T> {
 
   @Override
   public Set<T> getNodes() {
-    throw new UnsupportedOperationException("Unimplemented method 'getNodes'");
+    Set<T> nodes = new HashSet<>(edgeNodes.keySet());
+    return nodes;
   }
 
   @Override
@@ -81,12 +82,19 @@ public class ListGraph<T> implements Graph<T> {
 
   @Override
   public Edge<T> getEdgeBetween(T node1, T node2) {
-    throw new UnsupportedOperationException("Unimplemented method 'getEdgeBetween'");
+    if(!hasNode(node1) || !hasNode(node2)) throw new NoSuchElementException("Node is missing");
+    else {
+       List<Edge<T>> edgesInNode1 = edgeNodes.get(node1); // get node 1 edges
+       for(Edge<T> edge: edgesInNode1) {
+         if(edge.getDestination().equals(node2)) return edge;
+       }
+    }
+    return null;
   }
 
   @Override
   public Iterator<T> iterator() {
-    throw new UnsupportedOperationException("Unimplemented method 'iterator'");
+    return edgeNodes.keySet().iterator();
   }
 }
 
