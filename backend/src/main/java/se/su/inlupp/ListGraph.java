@@ -43,6 +43,8 @@ public class ListGraph<T> implements Graph<T> {
     if(weight < 0) throw new IllegalArgumentException("Weight cannot be negative");
     Edge<T> edgesBetween = getEdgeBetween(node1, node2);
     if(edgesBetween != null) {
+      throw new IllegalStateException("There is already a connection. ");
+    } else {
       // create new Edges
       EdgeBase<T> firstEdge = new EdgeBase(weight, name, node2);
       EdgeBase<T> secondEdge = new EdgeBase(weight, name, node1);
@@ -53,8 +55,6 @@ public class ListGraph<T> implements Graph<T> {
       // update nodes edges
       node1Edges.add(firstEdge);
       node2Edges.add(secondEdge);
-    } else {
-      throw new IllegalStateException();
     }
 
   }
@@ -77,7 +77,6 @@ public class ListGraph<T> implements Graph<T> {
 
   @Override
   public Collection<Edge<T>> getEdgesFrom(T node) {
-    throw new UnsupportedOperationException("Unimplemented method 'getEdgesFrom'");
   }
 
   @Override
@@ -87,6 +86,8 @@ public class ListGraph<T> implements Graph<T> {
        List<Edge<T>> edgesInNode1 = edgeNodes.get(node1); // get node 1 edges
        for(Edge<T> edge: edgesInNode1) {
          if(edge.getDestination().equals(node2)) return edge;
+         // if theedge leads to node2 add it to the list
+         // if not. the current becomes.
        }
     }
     return null;
