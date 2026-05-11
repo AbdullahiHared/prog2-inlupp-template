@@ -77,6 +77,9 @@ public class ListGraph<T> implements Graph<T> {
 
   @Override
   public Collection<Edge<T>> getEdgesFrom(T node) {
+    if(!hasNode(node)) throw new NoSuchElementException("Node was not found");
+    List<Edge<T>> edgesFrom =  edgeNodes.get(node);
+    return edgesFrom;
   }
 
   @Override
