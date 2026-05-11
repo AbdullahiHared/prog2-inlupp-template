@@ -35,6 +35,6 @@ public class EdgeBase<T> implements Edge<T> {
 
     @Override
     public String toString() {
-        return "Edge weight " + this.edgeWeight + " Name " + this.edgeName + " Destination " + this.destination;
+        return "till " + destination + " med " + this.edgeName + " tar " + this.edgeWeight;
     }
 }
