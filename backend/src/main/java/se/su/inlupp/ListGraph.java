@@ -3,103 +3,114 @@ package se.su.inlupp;
 import java.util.*;
 
 public class ListGraph<T> implements Graph<T> {
-  private Map<T, List<Edge<T>>> edgeNodes = new HashMap<>();
-  @Override
-  public void add(T node) {
-    edgeNodes.computeIfAbsent(node, e -> new ArrayList<Edge<T>>()); // save node if absent.
-  }
+    private Map<T, List<Edge<T>>> edgeNodes = new HashMap<>();
 
-  @Override
-  public void remove(T node) {
-    if(edgeNodes.containsKey(node)) {
-      for(T n: edgeNodes.keySet()) {
-        List<Edge<T>> edgeList = edgeNodes.get(n); // get edges connecting to n
-        List<Edge<T>> edgesToRemove = new ArrayList<>();
-        for(Edge<T> edge : edgeList) {
-          if(edge.getDestination().equals(node)) {
-            edgesToRemove.add(edge); //
-          }
+    @Override
+    public void add(T node) {
+        edgeNodes.computeIfAbsent(node, e -> new ArrayList<Edge<T>>()); // save node if absent.
+    }
+
+    @Override
+    public void remove(T node) {
+        if (edgeNodes.containsKey(node)) {
+            for (T n : edgeNodes.keySet()) {
+                List<Edge<T>> edgeList = edgeNodes.get(n); // get edges connecting to n
+                List<Edge<T>> edgesToRemove = new ArrayList<>();
+                for (Edge<T> edge : edgeList) {
+                    if (edge.getDestination().equals(node)) {
+                        edgesToRemove.add(edge); //
+                    }
+                }
+
+                // Remove edges connected to the given node
+                for (Edge<T> edge : edgesToRemove) {
+                    edgeList.remove(edge);
+                }
+            }
+            edgeNodes.remove(node);
+        } else {
+            throw new NoSuchElementException("given node was not found");
+        }
+    }
+
+    @Override
+    public boolean hasNode(T node) {
+        return edgeNodes.containsKey(node);
+    }
+
+    @Override
+    public void connect(T node1, T node2, String name, int weight) {
+        if (!hasNode(node1) || !hasNode(node2)) throw new NoSuchElementException("Node is missing");
+        if (weight < 0) throw new IllegalArgumentException("Weight cannot be negative");
+        Edge<T> edgesBetween = getEdgeBetween(node1, node2);
+        if (edgesBetween != null) {
+            throw new IllegalStateException("There is already a connection. ");
+        } else {
+            // create new Edges
+            EdgeBase<T> firstEdge = new EdgeBase(weight, name, node2);
+            EdgeBase<T> secondEdge = new EdgeBase(weight, name, node1);
+            // get Edges
+            List<Edge<T>> node1Edges = edgeNodes.get(node1);
+            List<Edge<T>> node2Edges = edgeNodes.get(node2);
+
+            // update nodes edges
+            node1Edges.add(firstEdge);
+            node2Edges.add(secondEdge);
         }
 
-        // Remove edges connected to the given node
-        for(Edge<T> edge : edgesToRemove) {
-          edgeList.remove(edge);
+    }
+
+    private void removeNodeEdge(Edge<T> edge, T node) {
+        List<Edge<T>> edgeList = edgeNodes.get(node); // get edges connecting to node
+        edgeList.remove(edge);
+    }
+
+    @Override
+    public void disconnect(T node1, T node2) {
+        if (!hasNode(node1) || !hasNode(node2)) throw new NoSuchElementException("Node is missing");
+        if (getEdgeBetween(node1, node2) == null) {
+            throw new IllegalStateException("Node edges found!");
         }
-      }
-      edgeNodes.remove(node);
-    } else {
-      throw new NoSuchElementException("given node was not found");
-    }
-  }
 
-  @Override
-  public boolean hasNode(T node) {
-    return edgeNodes.containsKey(node);
-  }
+        edgeNodes.get(node1).remove(getEdgeBetween(node1, node2));
+        edgeNodes.get(node2).remove(getEdgeBetween(node2, node1));
 
-  @Override
-  public void connect(T node1, T node2, String name, int weight) {
-    if(!hasNode(node1) || !hasNode(node2)) throw new NoSuchElementException("Node is missing");
-    if(weight < 0) throw new IllegalArgumentException("Weight cannot be negative");
-    Edge<T> edgesBetween = getEdgeBetween(node1, node2);
-    if(edgesBetween != null) {
-      throw new IllegalStateException("There is already a connection. ");
-    } else {
-      // create new Edges
-      EdgeBase<T> firstEdge = new EdgeBase(weight, name, node2);
-      EdgeBase<T> secondEdge = new EdgeBase(weight, name, node1);
-      // get Edges
-      List<Edge<T>> node1Edges = edgeNodes.get(node1);
-      List<Edge<T>> node2Edges = edgeNodes.get(node2);
-
-      // update nodes edges
-      node1Edges.add(firstEdge);
-      node2Edges.add(secondEdge);
     }
 
-  }
-
-  @Override
-  public void disconnect(T node1, T node2) {
-    throw new UnsupportedOperationException("Unimplemented method 'disconnect'");
-  }
-
-  @Override
-  public void setConnectionWeight(T node1, T node2, int weight) {
-    throw new UnsupportedOperationException("Unimplemented method 'setConnectionWeight'");
-  }
-
-  @Override
-  public Set<T> getNodes() {
-    Set<T> nodes = new HashSet<>(edgeNodes.keySet());
-    return nodes;
-  }
-
-  @Override
-  public Collection<Edge<T>> getEdgesFrom(T node) {
-    if(!hasNode(node)) throw new NoSuchElementException("Node was not found");
-    List<Edge<T>> edgesFrom =  edgeNodes.get(node);
-    return edgesFrom;
-  }
-
-  @Override
-  public Edge<T> getEdgeBetween(T node1, T node2) {
-    if(!hasNode(node1) || !hasNode(node2)) throw new NoSuchElementException("Node is missing");
-    else {
-       List<Edge<T>> edgesInNode1 = edgeNodes.get(node1); // get node 1 edges
-       for(Edge<T> edge: edgesInNode1) {
-         if(edge.getDestination().equals(node2)) return edge;
-         // if theedge leads to node2 add it to the list
-         // if not. the current becomes.
-       }
+    @Override
+    public void setConnectionWeight(T node1, T node2, int weight) {
+        throw new UnsupportedOperationException("Unimplemented method 'setConnectionWeight'");
     }
-    return null;
-  }
 
-  @Override
-  public Iterator<T> iterator() {
-    return edgeNodes.keySet().iterator();
-  }
+    @Override
+    public Set<T> getNodes() {
+        Set<T> nodes = new HashSet<>(edgeNodes.keySet());
+        return nodes;
+    }
+
+    @Override
+    public Collection<Edge<T>> getEdgesFrom(T node) {
+        if (!hasNode(node)) throw new NoSuchElementException("Node was not found");
+        List<Edge<T>> edgesFrom = edgeNodes.get(node);
+        return edgesFrom;
+    }
+
+    @Override
+    public Edge<T> getEdgeBetween(T node1, T node2) {
+        if (!hasNode(node1) || !hasNode(node2)) throw new NoSuchElementException("Node is missing");
+        else {
+            List<Edge<T>> edgesInNode1 = edgeNodes.get(node1); // get node 1 edges
+            for (Edge<T> edge : edgesInNode1) {
+                if (edge.getDestination().equals(node2)) return edge;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public Iterator<T> iterator() {
+        return edgeNodes.keySet().iterator();
+    }
 }
 
 
