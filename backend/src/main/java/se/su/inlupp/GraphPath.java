@@ -4,11 +4,11 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class PathBase<T> implements Path<T> {
+public class GraphPath<T> implements Path<T> {
     private T start;
     private List<Edge<T>> edges = new ArrayList<>();
 
-    public PathBase(T start, List<Edge<T>> edges) {
+    public GraphPath(T start, List<Edge<T>> edges) {
         this.edges = edges;
         this.start = start;
     }
@@ -43,14 +43,9 @@ public class PathBase<T> implements Path<T> {
     @Override
     public List<T> getNodes() {
         List<T> nodes = new ArrayList<>();
-        for(Edge<T> edge : edges) {
-            if(edge.getDestination() != null) {
-                nodes.add(edge.getDestination());
-                if(edge.getDestination() == this.getEnd()) {
-                    nodes.add(getEnd());
-                    break;
-                }
-            }
+        nodes.add(start);
+        for (Edge<T> edge : edges) {
+            nodes.add(edge.getDestination());
         }
         return nodes;
     }
