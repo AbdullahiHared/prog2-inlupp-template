@@ -7,15 +7,11 @@ public class DFSPathFinder<T> implements PathFinder<T> {
     //Empty constructor
     public DFSPathFinder() {
 
-    }
-
-    ;
+    };
 
     //Från Interface
     @Override
     public Path<T> findPath(Graph<T> graph, T from, T to) {
-
-        //Security checks like in BFS.
         if (graph == null || from == null || to == null) {
             return null;
         }
