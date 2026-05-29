@@ -7,10 +7,12 @@ Viktor Askergren
 package se.su.inlupp;
 
 import javafx.application.Application;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
@@ -119,9 +121,40 @@ public class Gui extends Application {
   }
 
   private void handleRemove() {
+    //Checks
+    if (selected.size() != 1) {
+      showError("Mark one place to remove, not more");
+      return;
+    }
+
+    //Get place
+    Place p = selected.get(0);
+
+    //Remove
+    model.removePlace(p);
+    mapPane.getChildren().remove(placeCircles.remove(p));
+    mapPane.getChildren().remove(placeLabels.remove(p));
+
+    //Create temp list for removal
+    List<ConnectionLine> toRemove = new ArrayList<>();
+    for (ConnectionLine cl : connectionLines) {
+      if (cl.a == p || cl.b == p) toRemove.add(cl);
+    }
+
+    //Remove collected connections
+    for (ConnectionLine cl : toRemove) {
+      mapPane.getChildren().remove(cl.line);
+      connectionLines.remove(cl);
+    }
+
+    //Clear marked spots
+    selected.clear();
+
   }
 
   private void handleNewPlace() {
+    newPlaceMode = true;
+    mapPane.setCursor(Cursor.CROSSHAIR);
   }
 
   private void handleNewConnection() {
@@ -144,10 +177,100 @@ public class Gui extends Application {
     System.out.println("new map");
   }
 
-  private void handleMapClick(double x, double y) { }
-  private void drawPlace(Place p) { }
-  private void handlePlaceClicked(Place p) { }
-  private void clearSelection() { }
+  private void handleMapClick(double x, double y) {
+    if (!newPlaceMode) return;
+    newPlaceMode = false;
+    mapPane.setCursor(Cursor.DEFAULT);
+
+    //Create text-window for user input
+    TextInputDialog dialog = new TextInputDialog();
+    dialog.setTitle("Name");
+    dialog.setHeaderText(null);
+    dialog.setContentText("Name of place:");
+
+    //Check if we got input
+    Optional<String> result = dialog.showAndWait();
+    if (result.isEmpty()) return;
+
+    //Verify
+    String name = result.get().trim();
+    if (name.isEmpty()) {
+      showError("Place name cannot be empty.");
+      return;
+    }
+    //Create & add new placeobj
+    Place p = new Place(name, x, y);
+    model.addPlace(p);
+    drawPlace(p);
+  }
+  private void drawPlace(Place p) {
+    Circle circle = new Circle(p.getX(), p.getY(), 8, Color.BLUE);
+    Text label = new Text(p.getX(), p.getY() + 4, p.getName());
+
+    //Add to map
+    mapPane.getChildren().addAll(circle, label);
+    //Save connections
+    placeCircles.put(p, circle);
+    placeLabels.put(p, label);
+
+    //Activate drag
+    enableDrag(p, circle, label);
+    //Connect click to event
+    circle.setOnMouseClicked(e -> handlePlaceClicked(p));
+  }
+  private void handlePlaceClicked(Place p) {
+    //Get circle belonging to click
+    Circle c = placeCircles.get(p);
+    if (selected.contains(p)) {
+      //If already marked
+      selected.remove(p);
+      c.setFill(Color.BLUE);
+    } else {
+      //Check if two spots not marked
+      if (selected.size() >= 2) {
+        showError("You can only mark two places, press marked place to unmark.");
+        return;
+      }
+      selected.add(p);
+      c.setFill(Color.RED);
+    }
+  }
+  private void clearSelection() {
+
+    //Loop all marked spots and clear
+    for (Place p : selected) placeCircles.get(p).setFill(Color.BLUE);
+    selected.clear();
+  }
+
+  private void enableDrag(Place p, Circle circle, Text label) {
+
+    //Create offset obj
+    DragOffSet offset = new DragOffSet();
+
+    //Event 1 pressed
+    circle.setOnMousePressed(e -> {
+      offset.dx = e.getX() - circle.getCenterX();
+      offset.dy = e.getY() - circle.getCenterY();
+    });
+
+    //Event 2 Dragged
+    circle.setOnMouseDragged(e -> {
+      double newX = e.getX() - offset.dx;
+      double newY = e.getY() - offset.dy;
+
+      //Move to new loc
+      circle.setCenterX(newX);
+      circle.setCenterY(newY);
+
+      //Move label
+      label.setX(newX + 10);
+      label.setY(newY + 4);
+
+      //Update pos
+      p.setPosition(newX, newY);
+    });
+  }
+
   private void drawConnection(Place a, Place b) { }
   private void clearEverything() { }
   private void showBackgroundImage(String path) { }
@@ -161,5 +284,11 @@ public class Gui extends Application {
     ConnectionLine(Place a, Place b, javafx.scene.shape.Line line) {
       this.a = a; this.b = b; this.line = line;
     }
+  }
+
+  //Helper class to store mousepointers loc relative to circle
+  private static class DragOffSet {
+    double dx; //Distance hor
+    double dy; //Distance vert
   }
 }
