@@ -15,7 +15,10 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+
+import java.io.File;
 import java.util.*;
 import javafx.scene.shape.Line;
 
@@ -167,10 +170,13 @@ public class Gui extends Application {
 
   private void handleSave() {
     System.out.println("Save");
+
   }
 
   private void handleOpen() {
     System.out.println("open");
+    FileChooser fileChooser = new FileChooser();
+    File selectedFile = fileChooser.showOpenDialog(primaryStage);
   }
 
   private void handleNewMap() {
