@@ -18,6 +18,13 @@ import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+import javafx.scene.image.Image;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 import java.io.File;
 import java.util.*;
 import javafx.scene.shape.Line;
@@ -120,7 +127,44 @@ public class Gui extends Application {
     a.showAndWait();
   }
 
-  private void handleFindPath() {
+  private void handleFindPath(){
+      if (selected.size() != 2) {
+          showError("Mark exactly two places before searching for a path.");
+          return;
+      }
+
+      Place from = selected.get(0);
+      Place to = selected.get(1);
+
+      Path<Place> path = model.findPath(from, to);
+
+      if (path == null) {
+          showInfo("No path", "No path found between " + from + " and " + to + ".");
+          return;
+      }
+
+      StringBuilder sb = new StringBuilder();
+      sb.append("Path from ").append(from).append(" to ").append(to).append(":\n\n");
+
+      Place current = path.getStart();
+
+      for (Edge<Place> edge : path) {
+          sb.append(current)
+                  .append(" -> ")
+                  .append(edge.getDestination())
+                  .append(" by ")
+                  .append(edge.getName())
+                  .append(" takes ")
+                  .append(edge.getWeight())
+                  .append("\n");
+
+          current = edge.getDestination();
+      }
+
+      sb.append("\nTotal travel time: ").append(path.getTotalWeight());
+
+      showInfo("Path", sb.toString());
+
   }
 
   private void handleRemove() {
@@ -161,26 +205,200 @@ public class Gui extends Application {
   }
 
   private void handleNewConnection() {
+      if (selected.size() != 2) {
+          showError("Mark exactly two places before creating a connection.");
+          return;
+      }
+
+      Place a = selected.get(0);
+      Place b = selected.get(1);
+
+      if (model.getEdgeBetween(a, b) != null) {
+          showError("There is already a connection between " + a + " and " + b + ".");
+          return;
+      }
+
+      Optional<ConnectionInput> result = askForConnection(a, b);
+      if (result.isEmpty()) return;
+
+      ConnectionInput input = result.get();
+
+      if (input.name.isEmpty()) {
+          showError("Connection name cannot be empty.");
+          return;
+      }
+
+      if (input.weight < 0) {
+          showError("Weight cannot be negative.");
+          return;
+      }
+
+      model.connect(a, b, input.name, input.weight);
+      drawConnection(a, b);
+      clearSelection();
   }
+
+
+    private Optional<ConnectionInput> askForConnection(Place a, Place b) {
+        Dialog<ConnectionInput> dialog = new Dialog<>();
+        dialog.setTitle("New Connection");
+        dialog.setHeaderText("Connection from " + a + " to " + b);
+
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        TextField nameField = new TextField();
+        TextField weightField = new TextField();
+
+        VBox box = new VBox(5);
+        box.getChildren().addAll(
+                new Label("Name:"),
+                nameField,
+                new Label("Travel time / weight:"),
+                weightField
+        );
+
+        dialog.getDialogPane().setContent(box);
+
+        dialog.setResultConverter(button -> {
+            if (button != ButtonType.OK) return null;
+
+            String name = nameField.getText().trim();
+            int weight;
+
+            try {
+                weight = Integer.parseInt(weightField.getText().trim());
+            } catch (NumberFormatException e) {
+                showError("Weight must be an integer.");
+                return null;
+            }
+
+            return new ConnectionInput(name, weight);
+        });
+
+        return dialog.showAndWait();
+    }
 
 
   private void handleExit() {
-    System.out.println("exit");
+      if (confirmDiscardChanges()) {
+          primaryStage.close();
+      }
   }
 
   private void handleSave() {
-    System.out.println("Save");
+      FileChooser chooser = new FileChooser();
+      chooser.setTitle("Save");
+      chooser.getExtensionFilters().add(
+              new FileChooser.ExtensionFilter("Text files", "*.txt")
+      );
+
+      File file = chooser.showSaveDialog(primaryStage);
+      if (file == null) return;
+
+      try (PrintWriter out = new PrintWriter(file, "UTF-8")) {
+          if (model.getImagePath() != null) {
+              out.println("image:" + model.getImagePath());
+          }
+
+          for (Place p : model.getPlaces()) {
+              out.println("PLACE;" + p.getName() + ";" + p.getX() + ";" + p.getY());
+          }
+
+          for (ConnectionLine cl : connectionLines) {
+              Edge<Place> edge = model.getEdgeBetween(cl.a, cl.b);
+
+              if (edge != null) {
+                  out.println("EDGE;" + cl.a.getName() + ";" + cl.b.getName()
+                          + ";" + edge.getName() + ";" + edge.getWeight());
+              }
+          }
+
+          model.resetChanges();
+          showInfo("Saved", "File saved successfully.");
+
+      } catch (IOException e) {
+          showError("Could not save file: " + e.getMessage());
+      }
 
   }
 
   private void handleOpen() {
-    System.out.println("open");
-    FileChooser fileChooser = new FileChooser();
-    File selectedFile = fileChooser.showOpenDialog(primaryStage);
+      if (!confirmDiscardChanges()) return;
+
+      FileChooser chooser = new FileChooser();
+      chooser.setTitle("Open");
+      chooser.getExtensionFilters().add(
+              new FileChooser.ExtensionFilter("Text files", "*.txt")
+      );
+
+      File file = chooser.showOpenDialog(primaryStage);
+      if (file == null) return;
+
+      clearEverything();
+
+      Map<String, Place> placesByName = new HashMap<>();
+
+      try {
+          List<String> lines = Files.readAllLines(Paths.get(file.getAbsolutePath()));
+
+          for (String line : lines) {
+              if (line.startsWith("image:")) {
+                  String path = line.substring("image:".length());
+                  model.setImagePath(path);
+                  showBackgroundImage(path);
+
+              } else if (line.startsWith("PLACE;")) {
+                  String[] parts = line.split(";");
+
+                  String name = parts[1];
+                  double x = Double.parseDouble(parts[2]);
+                  double y = Double.parseDouble(parts[3]);
+
+                  Place p = new Place(name, x, y);
+                  model.addPlace(p);
+                  drawPlace(p);
+                  placesByName.put(name, p);
+
+              } else if (line.startsWith("EDGE;")) {
+                  String[] parts = line.split(";");
+
+                  Place a = placesByName.get(parts[1]);
+                  Place b = placesByName.get(parts[2]);
+                  String edgeName = parts[3];
+                  int weight = Integer.parseInt(parts[4]);
+
+                  if (a != null && b != null) {
+                      model.connect(a, b, edgeName, weight);
+                      drawConnection(a, b);
+                  }
+              }
+          }
+
+          model.resetChanges();
+          showInfo("Opened", "File opened successfully.");
+
+      } catch (IOException | NumberFormatException | ArrayIndexOutOfBoundsException e) {
+          showError("Could not open file: " + e.getMessage());
+      }
+
   }
 
   private void handleNewMap() {
-    System.out.println("new map");
+      if (!confirmDiscardChanges()) return;
+
+      FileChooser chooser = new FileChooser();
+      chooser.setTitle("Open background image");
+      chooser.getExtensionFilters().add(
+              new FileChooser.ExtensionFilter("Image files", "*.png", "*.jpg", "*.jpeg", "*.gif")
+      );
+
+      File file = chooser.showOpenDialog(primaryStage);
+      if (file == null) return;
+
+      clearEverything();
+      model.setImagePath(file.getAbsolutePath());
+      showBackgroundImage(file.getAbsolutePath());
+      model.resetChanges();
   }
 
   private void handleMapClick(double x, double y) {
@@ -277,10 +495,71 @@ public class Gui extends Application {
     });
   }
 
-  private void drawConnection(Place a, Place b) { }
-  private void clearEverything() { }
-  private void showBackgroundImage(String path) { }
-  private boolean confirmDiscardChanges() { return true; }
+  private void drawConnection(Place a, Place b) {
+      Circle ca = placeCircles.get(a);
+      Circle cb = placeCircles.get(b);
+
+      if (ca == null || cb == null) {
+          showError("Could not draw connection.");
+          return;
+      }
+
+      Line line = new Line();
+
+      line.startXProperty().bind(ca.centerXProperty());
+      line.startYProperty().bind(ca.centerYProperty());
+      line.endXProperty().bind(cb.centerXProperty());
+      line.endYProperty().bind(cb.centerYProperty());
+
+      line.setStrokeWidth(2);
+
+      if (backgroundImage == null) {
+          mapPane.getChildren().add(0, line);
+      } else {
+          mapPane.getChildren().add(1, line);
+      }
+      connectionLines.add(new ConnectionLine(a, b, line));
+  }
+  private void clearEverything() {
+      mapPane.getChildren().clear();
+
+      placeCircles.clear();
+      placeLabels.clear();
+      selected.clear();
+      connectionLines.clear();
+
+      backgroundImage = null;
+
+      model.clear();
+  }
+  private void showBackgroundImage(String path) {
+      Image image = new Image("file:" + path);
+      backgroundImage = new ImageView(image);
+
+      backgroundImage.setPreserveRatio(true);
+      backgroundImage.setFitWidth(800);
+
+      mapPane.getChildren().add(0, backgroundImage);
+  }
+  private boolean confirmDiscardChanges() {
+      if (!model.hasUnsavedChanges()) {
+          return true;
+      }
+
+      Alert alert = new Alert(
+              Alert.AlertType.CONFIRMATION,
+              "You have unsaved changes. Continue and discard them?",
+              ButtonType.OK,
+              ButtonType.CANCEL
+      );
+
+      alert.setTitle("Unsaved changes");
+      alert.setHeaderText(null);
+
+      Optional<ButtonType> result = alert.showAndWait();
+
+      return result.isPresent() && result.get() == ButtonType.OK;
+  }
 
 
   private static class ConnectionLine {
@@ -291,6 +570,17 @@ public class Gui extends Application {
       this.a = a; this.b = b; this.line = line;
     }
   }
+
+
+    private static class ConnectionInput {
+        String name;
+        int weight;
+
+        ConnectionInput(String name, int weight) {
+            this.name = name;
+            this.weight = weight;
+        }
+    }
 
   //Helper class to store mousepointers loc relative to circle
   private static class DragOffSet {
