@@ -1,6 +1,6 @@
 /*
 Gruppnummer:45
-Abdullahi Hared
+Abdullahi Hared abab1819
 Devran Cinar
 Viktor Askergren
  */
@@ -55,11 +55,13 @@ public class Gui extends Application {
     mapPane.setStyle("-fx-background-color: #efefef;");
     mapPane.setOnMouseClicked(e -> handleMapClick(e.getX(), e.getY()));
 
-    Scene scene = new Scene(root, 400, 400);
+    Scene scene = new Scene(root, 800, 600);
     stage.setScene(scene);
     stage.setOnCloseRequest(e -> {
       if (!confirmDiscardChanges()) e.consume();
     });
+
+    stage.setTitle("PathFinder");
     stage.show();
 
   }
@@ -168,7 +170,7 @@ public class Gui extends Application {
   }
 
   private void handleRemove() {
-    //Checks
+    //Check if selected only place
     if (selected.size() != 1) {
       showError("Mark one place to remove, not more");
       return;
@@ -416,8 +418,9 @@ public class Gui extends Application {
     Optional<String> result = dialog.showAndWait();
     if (result.isEmpty()) return;
 
-    //Verify
+
     String name = result.get().trim();
+     //Verify
     if (name.isEmpty()) {
       showError("Place name cannot be empty.");
       return;
@@ -429,7 +432,7 @@ public class Gui extends Application {
   }
   private void drawPlace(Place p) {
     Circle circle = new Circle(p.getX(), p.getY(), 8, Color.BLUE);
-    Text label = new Text(p.getX(), p.getY() + 4, p.getName());
+    Text label = new Text(p.getX() + 10, p.getY() + 4, p.getName());
 
     //Add to map
     mapPane.getChildren().addAll(circle, label);
@@ -467,20 +470,19 @@ public class Gui extends Application {
   }
 
   private void enableDrag(Place p, Circle circle, Text label) {
-
     //Create offset obj
     DragOffSet offset = new DragOffSet();
 
     //Event 1 pressed
     circle.setOnMousePressed(e -> {
-      offset.dx = e.getX() - circle.getCenterX();
-      offset.dy = e.getY() - circle.getCenterY();
+      offset.distanceHorisontally = e.getX() - circle.getCenterX();
+      offset.distanceVertically = e.getY() - circle.getCenterY();
     });
 
     //Event 2 Dragged
     circle.setOnMouseDragged(e -> {
-      double newX = e.getX() - offset.dx;
-      double newY = e.getY() - offset.dy;
+      double newX = e.getX() - offset.distanceHorisontally;
+      double newY = e.getY() - offset.distanceVertically;
 
       //Move to new loc
       circle.setCenterX(newX);
@@ -496,20 +498,20 @@ public class Gui extends Application {
   }
 
   private void drawConnection(Place a, Place b) {
-      Circle ca = placeCircles.get(a);
-      Circle cb = placeCircles.get(b);
+      Circle cicleA = placeCircles.get(a);
+      Circle cicleB = placeCircles.get(b);
 
-      if (ca == null || cb == null) {
+      if (cicleA == null || cicleB == null) {
           showError("Could not draw connection.");
           return;
       }
 
       Line line = new Line();
 
-      line.startXProperty().bind(ca.centerXProperty());
-      line.startYProperty().bind(ca.centerYProperty());
-      line.endXProperty().bind(cb.centerXProperty());
-      line.endYProperty().bind(cb.centerYProperty());
+      line.startXProperty().bind(cicleA.centerXProperty());
+      line.startYProperty().bind(cicleA.centerYProperty());
+      line.endXProperty().bind(cicleB.centerXProperty());
+      line.endYProperty().bind(cicleB.centerYProperty());
 
       line.setStrokeWidth(2);
 
@@ -584,7 +586,7 @@ public class Gui extends Application {
 
   //Helper class to store mousepointers loc relative to circle
   private static class DragOffSet {
-    double dx; //Distance hor
-    double dy; //Distance vert
+    double distanceHorisontally; //Distance hor
+    double distanceVertically; //Distance vert
   }
 }
